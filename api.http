@@ -1,0 +1,7 @@
+POST http://192.168.3.6:1234/post
+Content-Type: application/json
+
+{
+    "ppm": 123,
+    "timestamp": "Sat, 07 Sep 2024 17:19:42 GMT"
+}

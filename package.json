@@ -1,0 +1,31 @@
+{
+  "name": "monitor_sensor_de_aire_ddp",
+  "version": "1.0.0",
+  "main": "app.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RoqueLovelace/air-sensor.git"
+  },
+  "author": "RoqueLovelace",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/RoqueLovelace/air-sensor/issues"
+  },
+  "homepage": "https://github.com/RoqueLovelace/air-sensor#readme",
+  "description": "",
+  "devDependencies": {
+    "semistandard": "17.0.0",
+    "servor": "4.0.2"
+  },
+  "eslintConfig": {
+    "extends": "semistandard"
+  },
+  "dependencies": {
+    "cors": "2.8.5",
+    "express": "4.19.2"
+  }
+}
