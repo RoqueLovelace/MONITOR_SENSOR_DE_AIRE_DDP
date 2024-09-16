@@ -37,8 +37,13 @@ String serverURL = "http://ipipip:1234/post";
 
 #pragma region VARIABLES DE HTTPRequest
 int ppm = -1; // se escoge -1 por si hay algun fallo, se podra ver este valor irreal
+
 String jsonPayload = "";
+
 char timeStringBuff[50] = "0-0-0";
+char dateBuff[11]; // YYYY-MM-DD (10 caracteres + 1 para '\0')
+char timeBuff[9];  // HH:MM:SS (8 caracteres + 1 para '\0')
+
 int httpResponseCode = -1;
 String response = "";
 bool lastRequestFailed4Connection = false;
@@ -211,11 +216,16 @@ void EnviarRequest()
     struct tm timeinfo;
     time(&now);
     localtime_r(&now, &timeinfo);
-    strftime(timeStringBuff, sizeof(timeStringBuff), "%Y-%m-%d %H:%M:%S", &timeinfo); // se vincula la hora formateada en el buffer timeStringBuff
+
+    // Formatear la fecha (YYYY-MM-DD)
+    strftime(dateBuff, sizeof(dateBuff), "%Y-%m-%d", &timeinfo);
+
+    // Formatear la hora (HH:MM:SS)
+    strftime(timeBuff, sizeof(timeBuff), "%H:%M:%S", &timeinfo);
 #pragma endregion
 
 #pragma region presentacion de datos
-    jsonPayload = "{\"ppm\": " + String(ppm) + ", \"timestamp\": \"" + String(timeStringBuff) + "\"}";
+    jsonPayload = "{\"ppm\": " + String(ppm) + ", \"date\": \"" + String(dateBuff) + "\"" + ", \"time\": \"" + String(timeBuff) + "\"}";
 
     strftime(timeStringBuff, sizeof(timeStringBuff), "%d-%m-%y %H:%M", &timeinfo); // modificamos la hora para ahorar espacio en el lcd
 #pragma endregion
