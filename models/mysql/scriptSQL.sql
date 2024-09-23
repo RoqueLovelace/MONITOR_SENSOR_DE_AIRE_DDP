@@ -41,3 +41,21 @@ INSERT INTO registros(ppm, fecha, tiempo) VALUES (307, '2024-09-16', '14:42:34')
 INSERT INTO registros(ppm, fecha, tiempo) VALUES (315, '2024-09-16', '14:52:34');
 INSERT INTO registros(ppm, fecha, tiempo) VALUES (321, '2024-09-16', '15:02:34');
 INSERT INTO registros(ppm, fecha, tiempo) VALUES (329, '2024-09-16', '15:12:34');
+
+INSERT INTO registros(ppm, fecha, tiempo) VALUES (255, '2024-09-17', '09:12:34');
+INSERT INTO registros(ppm, fecha, tiempo) VALUES (261, '2024-09-17', '09:22:34');
+INSERT INTO registros(ppm, fecha, tiempo) VALUES (267, '2024-09-17', '09:32:34');
+INSERT INTO registros(ppm, fecha, tiempo) VALUES (278, '2024-09-17', '09:42:34');
+INSERT INTO registros(ppm, fecha, tiempo) VALUES (285, '2024-09-17', '09:52:34');
+										
+SELECT id, ppm, fecha, tiempo FROM registros            
+WHERE fecha LIKE '2024-09-17%';  
+
+SELECT * FROM registros;
+
+SELECT id, ppm, fecha, tiempo FROM registros            
+WHERE fecha LIKE '2024-09-17%'
+ORDER BY fecha DESC, tiempo DESC;
+
+SET SQL_SAFE_UPDATES = 0;
+SET SQL_SAFE_UPDATES = 1;

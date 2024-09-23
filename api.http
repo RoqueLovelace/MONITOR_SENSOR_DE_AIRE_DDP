@@ -1,8 +1,11 @@
-POST http://localhost:1234/post
+POST http://192.168.3.6:1234/post
 Content-Type: application/json
 
 {
-  "ppm": 348,
-  "date":"2024-09-16",
-  "time":"15:52:34"
+  "ppm": 400,
+  "date":"2024-09-21",
+  "time":"17:42:34"
 }
+
+### recuperar toda la data
+GET http://localhost:1234/data

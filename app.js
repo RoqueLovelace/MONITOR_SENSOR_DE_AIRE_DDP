@@ -10,6 +10,7 @@ app.use(corsMiddleware);
 app.use(json());
 
 app.post('/post', DataController.insertData);
+app.get('/data', DataController.getAll);
 
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);

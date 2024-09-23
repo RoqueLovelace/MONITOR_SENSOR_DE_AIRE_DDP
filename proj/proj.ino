@@ -10,7 +10,7 @@
 
 #pragma region VARIABLES DE CONTADOR
 unsigned long previousMillis = 0; // Guarda el último valor de millis()
-const int intervaloEntreRequests = 5;
+const int intervaloEntreRequests = 300;
 long intervaloContador = 1000;               // Intervalo de tiempo (1 segundo = 1000 ms)
 int tiempoRestante = intervaloEntreRequests; // Tiempo del temporizador en segundos (10 minutos = 600 segundos)
 #pragma endregion
@@ -22,8 +22,8 @@ const int daylightOffset_sec = 0;       // Ajuste por horario de verano
 #pragma endregion
 
 #pragma region WIFI
-const char *ssid = ";";
-const char *password = "";
+const char *ssid = "ALVAREZ;";
+const char *password = "04B1CC29F1";
 #pragma endregion
 
 #pragma region LCD
@@ -32,7 +32,7 @@ int charPosicion = 0;
 #pragma endregion
 
 #pragma region SERVER
-String serverURL = "http://ipipip:1234/post";
+String serverURL = "http://192.168.3.6:1234/post";
 #pragma endregion
 
 #pragma region VARIABLES DE HTTPRequest

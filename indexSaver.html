@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="./style.css">
+  <title>Gráfica de PPM</title>
+</head>
+
+<body>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- hacer una copia de esto que realice lo mismo pero por el promedio de ppm por dia -->
+  <canvas id="areaChart"></canvas>
+  <script>
+    fetch('http://localhost:1234/data')
+      .then(response => response.json())
+      .then(data => {
+        const tiempos = data.map(item => item.tiempo);
+        const ppms = data.map(item => item.ppm);
+
+        const ctx = document.getElementById('areaChart').getContext('2d');
+        const areaChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: tiempos,
+            datasets: [{
+              label: 'PPM',
+              data: ppms,
+              backgroundColor: 'rgba(75, 192, 192, 0.2)',
+              borderColor: 'rgba(75, 192, 192, 1)',
+              fill: true, // Esto rellena el área bajo la línea
+            }]
+          },
+          options: {
+            scales: {
+              y: {
+                title: {
+                  display: true,
+                  text: 'PPM'
+                }
+              },
+              x: {
+                title: {
+                  display: true,
+                  text: 'Tiempo (hh:mm:ss)'
+                }
+              }
+            }
+          }
+        });
+      });
+  </script>
+
+  <!-- <canvas id="hourlyBarChart"></canvas>
+  <script>
+    fetch('http://localhost:1234/data')
+      .then(response => response.json())
+      .then(data => {
+        const ppms = data.map(item => item.ppm); // se extraen los ppm
+
+        // Calculo de el promedio de PPM por hora
+        const horaPromedio = {};
+
+        // Inicializa las 24 horas con el formato '00', '01', ..., '23'
+        for (let i = 0; i < 24; i++) {
+          const hora = i.toString().padStart(2, '0'); // Asegura que el formato sea de dos dígitos
+          horaPromedio[hora] = { total: 0, count: 0 };
+        }
+
+        //console.log(horaPromedio);
+
+        data.forEach(record => {
+          const hora = record.tiempo.slice(0, 2);
+          horaPromedio[hora].total += record.ppm;
+          horaPromedio[hora].count += 1;
+        });
+
+        const promedioPorHora = Object.keys(horaPromedio).map(hora => ({
+          hora,
+          promedio: horaPromedio[hora].total / horaPromedio[hora].count
+        }));
+
+        promedioPorHora.sort((a, b) => a.hora.localeCompare(b.hora));
+        const backgroundColors = promedioPorHora.map(value => ((value.promedio >= 1000 || value.promedio < 0) ? 'rgba(255, 10, 55, 0.6)' : (value.promedio >= 300 ? 'rgba(255, 255, 15, 0.6)' : 'rgba(0, 255, 0, 0.6)')));
+        const borderColors = promedioPorHora.map(value => ((value.promedio >= 1000 || value.promedio < 0) ? 'rgba(255, 10, 55, 1)' : (value.promedio >= 300 ? 'rgba(255, 255, 15, 1)' : 'rgba(0, 255, 0,1)')));
+        const ctx = document.getElementById('hourlyBarChart').getContext('2d');
+        const hourlyBarChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: promedioPorHora.map(item => `${item.hora}:00`),
+            datasets: [{
+              label: 'Promedio PPM por Hora',
+              data: promedioPorHora.map(item => item.promedio),
+              backgroundColor: backgroundColors,
+              borderColor: borderColors,
+              borderWidth: 1
+            }]
+          },
+          options: {
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: 'Promedio PPM'
+                }
+              },
+              x: {
+                title: {
+                  display: true,
+                  text: 'Hora del Día'
+                }
+              }
+            }
+          }
+        });
+      });
+  </script> -->
+
+
+  <!-- <canvas id="pieChart"></canvas>
+  <script>
+    fetch('http://localhost:1234/data')
+      .then(response => response.json())
+      .then(data => {
+        // Definir los rangos de PPM
+        const ranges = { '<300': 0, '300-1000': 0, '>1000': 0 };
+        data.forEach(item => {
+          const ppm = item.ppm;
+          if (ppm < 300 && ppm >= 0) ranges['<300']++;
+          else if (ppm >= 300 && ppm < 1000) ranges['300-1000']++;
+          else ranges['>1000']++;
+        });
+
+        const ctx = document.getElementById('pieChart').getContext('2d');
+        const pieChart = new Chart(ctx, {
+          type: 'pie',
+          data: {
+            labels: Object.keys(ranges),
+            datasets: [{
+              data: Object.values(ranges),
+              backgroundColor: ['rgba(0, 255, 0, 0.6)', 'rgba(255, 255, 15, 0.6)', 'rgba(255, 10, 55, 0.6)'],
+            }]
+          },
+          options: {
+            plugins: {
+              legend: {
+                position: 'top',
+              },
+              tooltip: {
+                callbacks: {
+                  label: function (tooltipItem) {
+                    return `${tooltipItem.label}: ${tooltipItem.raw}`;
+                  }
+                }
+              },
+              // Agrega un título al gráfico
+              title: {
+                display: true,
+                text: 'Niveles de PPM Registrados',
+                fontSize: 16,
+                fontColor: 'black', // Color del texto del título
+                padding: 20 // Espaciado alrededor del título
+              }
+            }
+          }
+        });
+      });
+  </script> -->
+
+  <!-- <canvas id="radarChart"></canvas>
+  <script>
+    fetch('http://localhost:1234/data')
+      .then(response => response.json())
+      .then(data => {
+        const ppms = data.map(item => item.ppm); // se extraen los ppm
+
+        // Calculo de el promedio de PPM por hora
+        const horaPromedio = {};
+
+        // Inicializa las 24 horas con el formato '00', '01', ..., '23'
+        for (let i = 0; i < 24; i++) {
+          const hora = i.toString().padStart(2, '0'); // Asegura que el formato sea de dos dígitos
+          horaPromedio[hora] = { total: 0, count: 0 };
+        }
+
+        //console.log(horaPromedio);
+
+        data.forEach(record => {
+          const hora = record.tiempo.slice(0, 2);
+          horaPromedio[hora].total += record.ppm;
+          horaPromedio[hora].count += 1;
+        });
+
+        const promedioPorHora = Object.keys(horaPromedio).map(hora => ({
+          hora,
+          promedio: horaPromedio[hora].total / horaPromedio[hora].count
+        }));
+
+        promedioPorHora.sort((a, b) => a.hora.localeCompare(b.hora));
+        const ctx = document.getElementById('radarChart').getContext('2d');
+        const radarChart = new Chart(ctx, {
+          type: 'radar',
+          data: {
+            labels: promedioPorHora.map(item => `${item.hora}:00`),
+            datasets: [{
+              label: 'PPM Promedio por Hora',
+              data: promedioPorHora.map(item => `${item.promedio}`),
+              backgroundColor: 'rgba(255, 99, 132, 0.2)',
+              borderColor: 'rgba(255, 99, 132, 1)',
+              borderWidth: 1
+            }]
+          },
+          options: {
+            scales: {
+              r: {
+                angleLines: {
+                  display: false
+                },
+                suggestedMin: 0,
+                suggestedMax: 400
+              }
+            }
+          }
+        });
+      });
+  </script> -->
+
+</html>
