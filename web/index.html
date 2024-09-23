@@ -16,49 +16,18 @@
   </header>
 
   <main class="container">
-    <section class="tableContainer"><!-- Tabla de últimos registros -->
-      <table>
-        <caption>Últimos datos registrados</caption>
-        <thead>
-          <tr>
-            <th>Fecha</th>
-            <th>Hora</th>
-            <th>PPM</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>2024-09-20</td>
-            <td>14:30:00</td>
-            <td>350</td>
-          </tr>
-          <tr>
-            <td>2024-09-20</td>
-            <td>14:00:00</td>
-            <td>400</td>
-          </tr>
-          <tr>
-            <td>2024-09-20</td>
-            <td>13:30:00</td>
-            <td>300</td>
-          </tr>
-          <!-- Más registros aquí -->
-        </tbody>
-      </table>
+    <section class="tableContainer">
+
     </section>
 
 
     <section class="canvasContainer">
-      <!-- Gráfico de área de PPM -->
       <canvas id="areaChart"></canvas>
 
-      <!-- Gráfico de barras promedio de PPM por hora -->
       <canvas id="hourlyBarChart"></canvas>
 
-      <!-- Gráfico circular de rangos de PPM -->
       <canvas id="pieChart"></canvas>
 
-      <!-- Gráfico radar de PPM promedio por hora -->
       <div class="canvasCard">
         <select id="diaSelector">
           <!-- Aquí se llenarán los días dinámicamente -->
@@ -310,6 +279,52 @@
         actualizarChart(primerDia);
       });
 
+  </script>
+
+  <script>
+    fetch('http://localhost:1234/data')
+      .then(response => response.json())
+      .then(data => {
+        const tableContainer = document.querySelector('.tableContainer');
+        const table = document.createElement('table');
+        table.classList.add('table');
+
+        // Crear la fila de encabezados
+        const caption = document.createElement('caption');
+        caption.textContent = 'Últimos 5 registros';
+        table.appendChild(caption);
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        ['Fecha', 'Hora', 'PPM'].forEach(headerText => {
+          const th = document.createElement('th');
+          th.textContent = headerText;
+          headerRow.appendChild(th);
+        });
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+
+        // Crear las filas de datos
+        const tbody = document.createElement('tbody');
+
+        for (let index = 0; index < 5; index++) {
+          const record = data[index];
+
+          const row = document.createElement('tr');
+          ['fecha', 'tiempo', 'ppm'].forEach(key => {
+            const cell = document.createElement('td');
+            if (key === 'fecha') {
+              cell.textContent = record[key].slice(0, 10);
+            } else cell.textContent = record[key];
+            row.appendChild(cell);
+          });
+          tbody.appendChild(row);
+
+        }
+
+        table.appendChild(tbody);
+
+        tableContainer.appendChild(table);
+      });
   </script>
 
 </body>
