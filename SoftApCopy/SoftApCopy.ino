@@ -86,19 +86,72 @@ int contadorProcessOutput = 0;
 
 void setup()
 {
-  EEPROM.begin(sizeof(struct settings));
-  EEPROM.get(0, user_wifi);
-
-  pinMode(ledRojo, OUTPUT);
-  pinMode(ledAmarillo, OUTPUT);
-  pinMode(ledVerde, OUTPUT);
-
   lcd.init();
   lcd.backlight();
   lcd.setCursor(0, 0);
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print("CONECTANDO");
+  delay(1000);
+
+  // Clear EEPROM for development (uncomment the next lines to use this)
+  // for (int i = 0; i < sizeof(struct settings); i++) {
+  //     EEPROM.write(i, 0);
+  // }
+  // EEPROM.commit(); // Ensure the changes are saved
+
+  EEPROM.begin(sizeof(struct settings));
+  EEPROM.get(0, user_wifi);
+
+  // Check if the SSID and password are empty
+  if (strlen(user_wifi.ssid) == 0 && strlen(user_wifi.password) == 0)
+  {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("VACIO");
+    delay(5000);
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print(user_wifi.ssid);
+    delay(1000);
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print(user_wifi.password);
+  }
+
+  if (strlen(user_wifi.ssid) != 0 && strlen(user_wifi.password) != 0)
+  {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("noVACIO");
+    delay(1000);
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print(user_wifi.ssid);
+    delay(1000);
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print(user_wifi.password);
+  }
+  // else
+  // {
+  //   lcd.clear();
+  //   lcd.setCursor(0, 0);
+  //   lcd.print("LLENO");
+  //   delay(5000);
+  //   lcd.clear();
+  //   lcd.setCursor(0, 0);
+  //   lcd.print(user_wifi.ssid);
+  //   delay(1000);
+  //   lcd.clear();
+  //   lcd.setCursor(0, 0);
+  //   lcd.print(user_wifi.password);
+  // }
+
+
+  pinMode(ledRojo, OUTPUT);
+  pinMode(ledAmarillo, OUTPUT);
+  pinMode(ledVerde, OUTPUT);
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(user_wifi.ssid, user_wifi.password);
@@ -109,22 +162,27 @@ void setup()
     delay(1000);
     if (tries++ > 30)
     {
-      WiFi.mode(WIFI_AP);
-      WiFi.softAP("Setup Sensor", "DDPSENSOR.01L");
-      lcd.clear();
-      lcd.setCursor(0, 0);
-      lcd.print("Setup AP Mode");
-      server.on("/", handlePortal);
-      server.on("/html", []()
-                { server.send(200, "text/css", index_html); });
-      server.on("/style.css", []()
-                { server.send(200, "text/css", style_css); });
-      server.on("/script.js", []()
-                { server.send(200, "application/javascript", script_js); });
-      server.on("/backend.js", []()
-                { server.send(200, "application/javascript", backend_js); });
-      server.on("/example-code", []()
-                {
+      // Si la EEPROM no está vacía, activa el modo offline
+      if (strlen(user_wifi.ssid) == 0 && strlen(user_wifi.password) == 0)
+      {
+
+                // Si no hay credenciales en EEPROM, activa modo AP
+        WiFi.mode(WIFI_AP);
+        WiFi.softAP("Setup Sensor", "DDPSENSOR.01L");
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Setup AP Mode");
+        server.on("/", handlePortal);
+        server.on("/html", []()
+                  { server.send(200, "text/css", index_html); });
+        server.on("/style.css", []()
+                  { server.send(200, "text/css", style_css); });
+        server.on("/script.js", []()
+                  { server.send(200, "application/javascript", script_js); });
+        server.on("/backend.js", []()
+                  { server.send(200, "application/javascript", backend_js); });
+        server.on("/example-code", []()
+                  {
       String examplePage = "<h1>Código fuente de ejemplo para presentación de datos obtenidos por el sensor</h1>";
       examplePage += "<ul>";
       examplePage += "<li><a href='/html'>index.html</a></li>";
@@ -134,8 +192,26 @@ void setup()
       examplePage += "</ul>";
       server.send(200, "text/html", examplePage); });
 
-      server.begin();
-      break;
+        server.begin();
+        break;
+      }
+      else
+      {
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("MODO OFFLINE");
+        lcd.setCursor(0, 1);
+        lcd.print("Leyendo sensor...");
+        while (true)
+        {
+          // Mostrar datos del sensor en el LCD
+          int ppm = analogRead(sensorData);
+          lcd.setCursor(0, 1);
+          lcd.print("PPM:");
+          lcd.print(ppm);
+          delay(1000); // Espera 1 segundo antes de actualizar
+        }
+      }
     }
   }
 
@@ -159,6 +235,27 @@ void loop()
   if (WiFi.status() != WL_CONNECTED)
   {
     server.handleClient();
+    // if (strlen(user_wifi.ssid) < 1)
+    // {
+    //   lcd.clear();
+    //   lcd.setCursor(0, 0);
+    //   lcd.print("MODO OFFLINE");
+    //   lcd.setCursor(0, 1);
+    //   lcd.print("Leyendo sensor...");
+    //   while (true)
+    //   {
+    //     // Mostrar datos del sensor en el LCD
+    //     int ppm = analogRead(sensorData);
+    //     lcd.setCursor(0, 1);
+    //     lcd.print("PPM:");
+    //     lcd.print(ppm);
+    //     delay(1000); // Espera 1 segundo antes de actualizar
+    //   }
+    // }
+    // else
+    // {
+    // //   server.handleClient();
+    // }
   }
   else
   {
