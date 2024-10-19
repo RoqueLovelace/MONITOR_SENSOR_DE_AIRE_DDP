@@ -11,6 +11,7 @@ export class DataController {
 
     try {
       await DataModel.register({ data: result.data });
+      console.log(result.data);
       res.status(201).send({ success: result.data });
     } catch (error) {
       console.error('Error inserting data:', error);

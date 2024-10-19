@@ -10,6 +10,9 @@
 #define ledRojo 13
 #define sensorData A0
 
+const int botonFlash = 0; // GPIO0, pin del botón flash
+bool fueReseteado = false;
+
 ESP8266WebServer server(80);
 const char *index_html = R"rawliteral(
 <!DOCTYPE html>
@@ -29,33 +32,155 @@ const char *index_html = R"rawliteral(
 const char *style_css = R"rawliteral(
 body {
   font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #222;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
+
+header {
+  background-color: #007bff;
+  color: white;
+  padding: 1rem;
+  text-align: center;
+  width: 100%;
+}
+
 h1 {
-  color: #333;
+  margin: 0;
 }
-#data {
-  font-size: 1.5em;
-  color: #007bff;
+
+.container {
+  width: 80%;
+  margin: 2rem 0;
+  background-color: #ddd;
+  padding: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+table {
+  width: 100%;
+  margin-bottom: 2rem;
+}
+
+caption {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  background-color: #007bff;
+  color: white;
+}
+
+table,
+th,
+td {
+  border: 1px solid #ddd;
+}
+
+th,
+td {
+  padding: 12px;
+  text-align: center;
+}
+
+th {
+  background-color: #007bff;
+  color: white;
+}
+
+.canvasContainer {
+  justify-content: center;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.canvasCard {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+canvas {
+  max-width: 550px;
+  max-height: 550px;
+}
+
+footer {
+  text-align: center;
+  padding: 1rem;
+  background-color: #007bff;
+  color: white;
+  width: 100%;
 }
 )rawliteral";
 
 const char *script_js = R"rawliteral(
-fetch('/sensor-data')
-  .then(response => response.json())
-  .then(data => {
-    document.getElementById('data').innerText = `PPM: ${data.ppm}`;
-  });
+fetch('http://localhost:1234/data')
+      .then(response => response.json())
+      .then(data => {
+        const tiempos = data.map(item => item.tiempo);
+        const ppms = data.map(item => item.ppm);
+
+        const ctx = document.getElementById('areaChart').getContext('2d');
+        const areaChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: tiempos,
+            datasets: [{
+              label: 'PPM',
+              data: ppms,
+              backgroundColor: 'rgba(75, 192, 192, 0.2)',
+              borderColor: 'rgba(75, 192, 192, 1)',
+              fill: true, // Esto rellena el área bajo la línea
+            }]
+          },
+          options: {
+            scales: {
+              y: {
+                title: {
+                  display: true,
+                  text: 'PPM'
+                }
+              },
+              x: {
+                title: {
+                  display: true,
+                  text: 'Tiempo (hh:mm:ss)'
+                }
+              }
+            }
+          }
+        });
+      });
 )rawliteral";
 
 const char *backend_js = R"rawliteral(
-const express = require('express');
+import express, { json } from 'express';
+import { DataController } from './controllers/data.js';
+import { corsMiddleware } from './middleware/cors.js';
 const app = express();
+const PORT = process.env.PORT ?? 1234;
 
-app.get('/sensor-data', (req, res) => {
-  res.json({ ppm: 350 }); // Example data
+app.disable('x-powered-by');
+
+app.use(corsMiddleware);
+app.use(json());
+
+app.post('/post', DataController.insertData);
+app.get('/data', DataController.getAll);
+
+app.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
 });
 
-app.listen(3000, () => console.log('Server running on port 3000'));
 )rawliteral";
 
 struct settings
@@ -81,11 +206,12 @@ const int daylightOffset_sec = 0;       // Ajuste por horario de verano
 char timeStringBuff[50] = "0-0-0";
 char dateBuff[11]; // YYYY-MM-DD (10 caracteres + 1 para '\0')
 char timeBuff[9];  // HH:MM:SS (8 caracteres + 1 para '\0')
-String processOutput[4] = {"", "", "", ""};
-int contadorProcessOutput = 0;
+String processOutput = "";
 
 void setup()
 {
+  pinMode(botonFlash, INPUT); // Configurar el GPIO0 como entrada
+
   lcd.init();
   lcd.backlight();
   lcd.setCursor(0, 0);
@@ -161,15 +287,15 @@ void setup()
     digitalWrite(ledVerde, HIGH);
     digitalWrite(ledAmarillo, LOW);
     digitalWrite(ledRojo, LOW);
-    delay(333);
+    delay(166);
     digitalWrite(ledVerde, LOW);
     digitalWrite(ledAmarillo, HIGH);
     digitalWrite(ledRojo, LOW);
-    delay(333);
+    delay(166);
     digitalWrite(ledVerde, LOW);
     digitalWrite(ledAmarillo, LOW);
     digitalWrite(ledRojo, HIGH);
-    delay(333);
+    delay(166);
     if (tries++ > 30)
     {
       // Si la EEPROM no está vacía, activa el modo offline
@@ -181,7 +307,7 @@ void setup()
         WiFi.softAP("Setup Sensor", "DDPSENSOR.01L");
         lcd.clear();
         lcd.setCursor(0, 0);
-        lcd.print("Setup AP Mode");
+        lcd.print("Ingresar informacion");
         server.on("/", handlePortal);
         server.on("/html", []()
                   { server.send(200, "text/css", index_html); });
@@ -235,90 +361,132 @@ void setup()
 
 void loop()
 {
-  if (WiFi.status() != WL_CONNECTED)
-  {
+  int estadoBoton = digitalRead(botonFlash); // Leer el estado del botón
 
-    delay(1000);
+  if (estadoBoton == LOW)
+  { // Si el botón está presionado (LOW)
     lcd.clear();
     lcd.setCursor(0, 0);
-    lcd.print("MODO OFFLINE");
-    int ppm = analogRead(sensorData);
+    lcd.print("Botón Flash presionado");
+  }
+
+  if (fueReseteado)
+  {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Datos borrados");
+    fueReseteado = true;
     lcd.setCursor(0, 1);
-    lcd.print("PPM:");
-    lcd.print(ppm);
-    if (ppm == -1 || ppm >= 1000)
-    {
-      digitalWrite(ledVerde, LOW);
-      digitalWrite(ledAmarillo, LOW);
-      digitalWrite(ledRojo, HIGH);
-    }
-    else if (ppm >= 400)
-    {
-      digitalWrite(ledVerde, LOW);
-      digitalWrite(ledAmarillo, HIGH);
-      digitalWrite(ledRojo, LOW);
-    }
-    else
-    {
-      digitalWrite(ledVerde, HIGH);
-      digitalWrite(ledAmarillo, LOW);
-      digitalWrite(ledRojo, LOW);
-    }
-    server.handleClient();
+    lcd.print("Reiniciar sensor");
+  }
+  else if (estadoBoton == LOW)
+  {
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Borrando información");
+
+    EEPROM.begin(sizeof(struct settings));
+
+    // Borrar los datos en la EEPROM escribiendo ceros
+    memset(&user_wifi, 0, sizeof(user_wifi)); // Establece todos los campos en cero
+    EEPROM.put(0, user_wifi);                 // Sobreescribe en la EEPROM
+    EEPROM.commit();                          // Guarda los cambios
+
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("Datos borrados");
+    fueReseteado = true;
+    lcd.setCursor(0, 1);
+    lcd.print("Reiniciando...");
+    delay(5000);
+    ESP.restart();
   }
   else
   {
-    unsigned long currentMillis = millis();
-    if (currentMillis - previousMillis >= intervaloContador)
+    if (WiFi.status() != WL_CONNECTED)
     {
-      previousMillis = currentMillis;
 
-      if (tiempoRestante > 0)
+      delay(1000);
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print("MODO OFFLINE");
+      int ppm = analogRead(sensorData);
+      lcd.setCursor(0, 1);
+      lcd.print("PPM:");
+      lcd.print(ppm);
+      if (ppm == -1 || ppm >= 1000)
       {
-        tiempoRestante--;
-        lcd.clear();
-
-        // Mostramos el PPM y el tiempo restante
-        lcd.setCursor(0, 0);
-        int ppm = analogRead(sensorData);
-        lcd.print("ppm:");
-        lcd.print(ppm);
-
-        // Formateamos el tiempo
-        char tiempoFormato[6];
-        sprintf(tiempoFormato, "%02d:%02d", tiempoRestante / 60, tiempoRestante % 60);
-        lcd.setCursor(11, 0);
-        lcd.print(tiempoFormato);
-
-        // Intercalamos la información de la última petición
-        lcd.setCursor(0, 1);
-        lcd.print(processOutput[contadorProcessOutput].substring(0, 16));
-        contadorProcessOutput = (contadorProcessOutput + 1) % 4;
-
-        // Control de LEDs según los valores de PPM
-        if (ppm == -1 || ppm >= 1000)
-        {
-          digitalWrite(ledVerde, LOW);
-          digitalWrite(ledAmarillo, LOW);
-          digitalWrite(ledRojo, HIGH);
-        }
-        else if (ppm >= 400)
-        {
-          digitalWrite(ledVerde, LOW);
-          digitalWrite(ledAmarillo, HIGH);
-          digitalWrite(ledRojo, LOW);
-        }
-        else
-        {
-          digitalWrite(ledVerde, HIGH);
-          digitalWrite(ledAmarillo, LOW);
-          digitalWrite(ledRojo, LOW);
-        }
+        digitalWrite(ledVerde, LOW);
+        digitalWrite(ledAmarillo, LOW);
+        digitalWrite(ledRojo, HIGH);
+      }
+      else if (ppm >= 400)
+      {
+        digitalWrite(ledVerde, LOW);
+        digitalWrite(ledAmarillo, HIGH);
+        digitalWrite(ledRojo, LOW);
       }
       else
       {
-        EnviarRequest();
-        tiempoRestante = user_wifi.requestIntervalTime; // Reiniciar el temporizador
+        digitalWrite(ledVerde, HIGH);
+        digitalWrite(ledAmarillo, LOW);
+        digitalWrite(ledRojo, LOW);
+      }
+      server.handleClient();
+    }
+    else
+    {
+      unsigned long currentMillis = millis();
+      if (currentMillis - previousMillis >= intervaloContador)
+      {
+        previousMillis = currentMillis;
+
+        if (tiempoRestante > 0)
+        {
+          tiempoRestante--;
+          lcd.clear();
+
+          // Mostramos el PPM y el tiempo restante
+          lcd.setCursor(0, 0);
+          int ppm = analogRead(sensorData);
+          lcd.print("ppm:");
+          lcd.print(ppm);
+
+          // Formateamos el tiempo
+          char tiempoFormato[6];
+          sprintf(tiempoFormato, "%02d:%02d", tiempoRestante / 60, tiempoRestante % 60);
+          lcd.setCursor(11, 0);
+          lcd.print(tiempoFormato);
+
+          // Intercalamos la información de la última petición
+          lcd.setCursor(0, 1);
+          lcd.print(processOutput.substring(0, 16));
+
+          // Control de LEDs según los valores de PPM
+          if (ppm == -1 || ppm >= 1000)
+          {
+            digitalWrite(ledVerde, LOW);
+            digitalWrite(ledAmarillo, LOW);
+            digitalWrite(ledRojo, HIGH);
+          }
+          else if (ppm >= 400)
+          {
+            digitalWrite(ledVerde, LOW);
+            digitalWrite(ledAmarillo, HIGH);
+            digitalWrite(ledRojo, LOW);
+          }
+          else
+          {
+            digitalWrite(ledVerde, HIGH);
+            digitalWrite(ledAmarillo, LOW);
+            digitalWrite(ledRojo, LOW);
+          }
+        }
+        else
+        {
+          EnviarRequest();
+          tiempoRestante = user_wifi.requestIntervalTime; // Reiniciar el temporizador
+        }
       }
     }
   }
@@ -392,17 +560,11 @@ void EnviarRequest()
     // Procesamos la respuesta
     if (httpResponseCode > 0)
     {
-      String response = http.getString();
-      processOutput[0] = "Req. SENDED";
-      processOutput[1] = String(timeBuff);
-      processOutput[2] = "Code: " + String(httpResponseCode);
-      processOutput[3] = "Resp: " + response;
+      processOutput = "REQ. ENVIADA";
     }
     else
     {
-      processOutput[0] = "ERROR IN REQUEST";
-      processOutput[1] = "Failed";
-      processOutput[2] = "No Connection";
+      processOutput = "ERROR EN REQUEST";
     }
     http.end();
   }
